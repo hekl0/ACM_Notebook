@@ -287,7 +287,7 @@ def main():
         else:
             raise ValueError("Unkown language: " + str(language))
     except (ValueError, getopt.GetoptError, IOError) as err:
-        print(str(err), file=sys.stderr)
+        print("\nxxx" + str(err), file=sys.stderr)
         print("\t for help use --help", file=sys.stderr)
         return 2
 
