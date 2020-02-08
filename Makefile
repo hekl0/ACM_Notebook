@@ -26,7 +26,7 @@ clean:
 	cd build && rm -f kactl.aux kactl.log kactl.tmp kactl.toc kactl.pdf kactl.ptc
 
 veryclean: clean
-	rm -f kactl.pdf test-session.pdf
+	rm -f uofr.pdf test-session.pdf
 
 .PHONY: help fast kactl clean veryclean
 
