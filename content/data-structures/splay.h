@@ -1,73 +1,53 @@
 /**
- * Author: Codeforces
+ * Author: Loc Bui
  * Description:
  */
 #pragma once
 struct Node {
-    Node *l;
-    Node *r;
-    Node *p;
+    Node *l, *r, *p;
     int v, size;
     Node(): l(NULL), r(NULL), p(NULL), v(0), size(0) {};
     Node(int v): l(NULL), r(NULL), p(NULL), v(v), size(1) {};
 };
 Node *root;
 void update(Node *P) {
-    P->size = P->l->size + P->r->size + 1;
+    P->size = (P->l ? P->l->size : 0) + (P->r ? P->r->size : 0) + 1;
 }
 void rightRotate(Node *P) {
     Node *T = P->l;
     Node *B = T->r;
     Node *D = P->p;
-    if (D) {
-        if (D->r == P)
-            D->r = T;
-        else
-            D->l = T;
-    }
+    if (D) 
+        if (D->r == P) D->r = T;
+        else D->l = T;
     if (B)
         B->p = P;
-    T->p = D;
-    T->r = P;
-
-    P->p = T;
-    P->l = B;
-
+    T->p = D, T->r = P;
+    P->p = T, P->l = B;
     update(P); update(T);
 }
 void leftRotate(Node *P) {
     Node *T = P->r;
     Node *B = T->l;
     Node *D = P->p;
-    if (D) {
-        if (D->r == P)
-            D->r = T;
-        else
-            D->l = T;
-    }
+    if (D) 
+        if (D->r == P) D->r = T;
+        else D->l = T;
     if (B)
         B->p = P;
-    T->p = D;
-    T->l = P;
-
-    P->p = T;
-    P->r = B;
-
+    T->p = D, T->l = P;
+    P->p = T, P->r = B;
     update(P); update(T);
 }
-
 // Make T root and Balance tree 
 void Splay(Node *T) {
     while (true) {
         Node *p = T->p;
         if (!p) break;
         Node *pp = p->p;
-        if (!pp)  //Zig
-        {
-            if (p->l == T)
-                rightRotate(p);
-            else
-                leftRotate(p);
+        if (!pp) {  //Zig
+            if (p->l == T) rightRotate(p);
+            else leftRotate(p);
             break;
         }
         if (pp->l == p) {
@@ -90,82 +70,32 @@ void Splay(Node *T) {
     }
     root = T;
 }
-void Insert(int v) {
+// Insert to the right of the root, and return reference to the new created node
+Node *Insert(int v) {
+    Node *newNode = new Node(v);
     if (!root) {
-        root = new Node(v);
-        return;
+        root = newNode;
+        return newNode;
     }
-    Node *P = root;
-    while (true) {
-        if (P->v == v) break;  // not multiset
-        if (v < (P->v)) {
-            if (P->l)
-                P = P->l;
-            else {
-                P->l = new Node(v);
-                P->l->p = P;
-                P = P->l;
-                update(P->p);
-                break;
-            }
-        } else {
-            if (P->r)
-                P = P->r;
-            else {
-                P->r = new Node(v);
-                P->r->p = P;
-                P = P->r;
-                update(P->p);
-                break;
-            }
-        }
-    }
-    Splay(P);
-}
-void Inorder(Node *R) {
-    if (!R) return;
-    Inorder(R->l);
-    printf("v: %d ", R->v);
-    if (R->l) printf("l: %d ", R->l->v);
-    if (R->r) printf("r: %d ", R->r->v);
-    puts("");
-    Inorder(R->r);
-}
-// Find v and make v root
-Node *Find(int v) {
-    if (!root) return NULL;
-    Node *P = root;
-    while (P) {
-        if (P->v == v)
-            break;
-        if (v < (P->v)) {
-            if (P->l)
-                P = P->l;
-            else
-                break;
-        } else {
-            if (P->r)
-                P = P->r;
-            else
-                break;
-        }
-    }
-    Splay(P);
-    if (P->v == v)
-        return P;
-    else
-        return NULL;
+    Node *R = root->r;
+    root->r = newNode, newNode->p = root;
+    if (R) newNode->r = R, R->p = newNode;
+    update(newNode);
+    update(root);
+    return newNode;
 }
 // Delete v
-bool Erase(int v) {
-    Node *N = Find(v);
-    if (!N) return false;
-    Node *L = N->l;
-    Node *R = N->r;
+bool Erase(Node *node) {
+    Splay(node);
+    Node *L = node->l;
+    Node *R = node->r;
 
-    L->p = NULL;
-    R->p = NULL;
-    free(N);
+    if (L) L->p = NULL;
+    if (R) R->p = NULL;
+    free(node);
+
+    if (!L) return root = R, true;
+    if (!R) return root = L, true;
 
     while (L->r) L = L->r;
     Splay(L);
@@ -174,26 +104,27 @@ bool Erase(int v) {
     
     return true;
 }
-int main() {
+// Find the node at position p and make it root (position start from 1)
+void Find(int p) {
+    Node *node = root;
     while (true) {
-        int t;
-        scanf("%d", &t);
-        if (t != 0 && t != -1)
-            Insert(t);
-        else if (t == 0) {
-            scanf("%d", &t);
-            if (!Find(t))
-                printf("Couldn't Find %d!\n", t);
-            else
-                printf("Found %d!\n", t);
-        } else {
-            scanf("%d", &t);
-            if (Erase(t))
-                printf("Deleted %d!\n", t);
-            else
-                printf("Couldn't Find %d!\n", t);
+        if (node->l) {
+            if (node->l->size >= p) {
+                node = node->l;
+                continue;
+            } else 
+                p -= node->l->size;
         }
-        if (root) printf("root: %d\n", root->v);
-        Inorder(root);
-    }
+        if (p == 1) break;
+        p -= 1;
+        if (node->r) node = node->r;
+        else break;
+    } 
+    Splay(node);
+}
+void Inorder(Node *R) {
+    if (!R) return;
+    Inorder(R->l);
+    printf("%d ", R->v);
+    Inorder(R->r);
 }
