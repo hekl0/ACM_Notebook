@@ -7,17 +7,13 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
-
 /* persistent segment tree w/ sum query */
 struct per_seg {
     vector<int> lc,rc,lx,rx,val,roots = {0};
-
     //CHANGE ME
     inline static int combine(int a, int b) {
         return a+b;
     }
-
     //build PST on indices i ... j of array a
     int build(int i, int j, int* a) {
         int v = lc.size();
@@ -31,7 +27,6 @@ struct per_seg {
         }
         return v;
     }
-
     int q(int v, int i, int j) {
         if(j < lx[v] || rx[v] < i)
             return 0;
@@ -39,7 +34,6 @@ struct per_seg {
             return val[v];
         return combine(q(lc[v],i,j),q(rc[v],i,j));
     }
-
     int u(int v, int i, int a) {
         if(i < lx[v] || rx[v] < i)
             return v;
@@ -50,37 +44,26 @@ struct per_seg {
         val.push_back(val[v]+a);
         if(lx[v] != rx[v]) {
             int l = u(lc[v],i,a), r = u(rc[v],i,a);
-            lc[w] = l;
-            rc[w] = r;
+            lc[w] = l;rc[w] = r;
             val[w] = combine(val[l],val[r]);
         }
         return w;
     }
-
     //sum from i to j after t updates
     int query(int i, int j, int t = -1) {
         if(t == -1) t = roots.size()-1;
         return q(roots[t],i,j);
     }
-
     //add a to position i at time t
     void update(int i, int a, int t) {
         roots.push_back(u(roots[t],i,a));
     }
-
-
 };
-
-/* USAGE */
-
-int main() {
+int main() {/* USAGE */
     int a[5] = {1,1,1,1,1};
     per_seg p;
     p.build(0,4,a);
     p.update(1,1);
     p.update(3,2);
-    cout << p.query(2,2,5) << "\n";
-    cout << p.query(0,2,5) << "\n";
-    cout << p.query(1,0,3) << "\n"
-    return 0;
+    cout << p.query(2,2,5) << p.query(0,2,5) p.query(1,0,3) << "\n"
 }
