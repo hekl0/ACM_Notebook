@@ -1,84 +1,80 @@
-/**
- * Author: Simon Lindholm
- * Date: 2015-02-18
- * License: CC0
- * Source: marian's (TC) code
- * Description: Aho-Corasick tree is used for multiple pattern matching.
- * Initialize the tree with create(patterns). find(word) returns for each position
- * the index of the longest word that ends there, or -1 if none. findAll(\_, word) finds all words
- * (up to $N \sqrt N$ many if no duplicate patterns) that start at each position (shortest first).
- * Duplicate patterns are allowed; empty patterns are not.
- * To find the longest words that start at each position, reverse all input.
- * Time: create is $O(26N)$ where $N$ is the sum of length of patterns.
- * find is $O(M)$ where $M$ is the length of the word. findAll is $O(NM)$.
- * Status: lightly tested
- */
-#pragma once
+// Aho Corasick - <O(sum(m)), O(n + #matches)>
+// Multiple string matching
 
-struct AhoCorasick {
-	enum {alpha = 26, first = 'A'};
-	struct Node {
-		// (nmatches is optional)
-		int back, next[alpha], start = -1, end = -1, nmatches = 0;
-		Node(int v) { memset(next, v, sizeof(next)); }
-	};
-	vector<Node> N;
-	vector<int> backp;
-	void insert(string& s, int j) {
-		assert(!s.empty());
-		int n = 0;
-		trav(c, s) {
-			int& m = N[n].next[c - first];
-			if (m == -1) { n = m = sz(N); N.emplace_back(-1); }
-			else n = m;
-		}
-		if (N[n].end == -1) N[n].start = j;
-		backp.push_back(N[n].end);
-		N[n].end = j;
-		N[n].nmatches++;
-	}
-	AhoCorasick(vector<string>& pat) {
-		N.emplace_back(-1);
-		rep(i,0,sz(pat)) insert(pat[i], i);
-		N[0].back = sz(N);
-		N.emplace_back(0);
+int p[N], f[N], nxt[N][26], ch[N];
+int tsz=1; // size of the trie
 
-		queue<int> q;
-		for (q.push(0); !q.empty(); q.pop()) {
-			int n = q.front(), prev = N[n].back;
-			rep(i,0,alpha) {
-				int &ed = N[n].next[i], y = N[prev].next[i];
-				if (ed == -1) ed = y;
-				else {
-					N[ed].back = y;
-					(N[ed].end == -1 ? N[ed].end : backp[N[ed].start])
-						= N[y].end;
-					N[ed].nmatches += N[y].nmatches;
-					q.push(ed);
-				}
-			}
-		}
-	}
-	vi find(string word) {
-		int n = 0;
-		vi res; // ll count = 0;
-		trav(c, word) {
-			n = N[n].next[c - first];
-			res.push_back(N[n].end);
-			// count += N[n].nmatches;
-		}
-		return res;
-	}
-	vector<vi> findAll(vector<string>& pat, string word) {
-		vi r = find(word);
-		vector<vi> res(sz(word));
-		rep(i,0,sz(word)) {
-			int ind = r[i];
-			while (ind != -1) {
-				res[i - sz(pat[ind]) + 1].push_back(ind);
-				ind = backp[ind];
-			}
-		}
-		return res;
-	}
-};
+int cnt[N]; // used to know number of matches
+
+// used to know which strings matches.
+// S is the number of strings. Can use set instead
+const int S = 2e3+5;
+bitset<S> elem[N];
+
+void init() {
+  tsz=1;
+  memset(f, 0, sizeof(f));
+  memset(nxt, 0, sizeof(nxt));
+  memset(cnt, 0, sizeof(cnt));
+  for (int i = 0; i < N; i++) elem[i].reset();
+}
+
+void add(const string &s, int x) {
+  int cur = 1; // the first element of the trie is the root
+
+  for (int i=0; s[i]; ++i) {
+    int j = s[i] - 'a';
+    if (!nxt[cur][j]) {
+      tsz++;
+      p[tsz] = cur;
+      ch[tsz] = j;
+      nxt[cur][j] = tsz;
+    }
+    cur = nxt[cur][j];
+  }
+
+  cnt[cur]++; //
+  elem[cur].set(x);
+}
+
+void build() {
+  queue<int> q;
+
+  for(int i=0; i<26; ++i) {
+    nxt[0][i] = 1;
+    if (nxt[1][i]) q.push(nxt[1][i]);
+  }
+
+  while (!q.empty()) {
+    int v = q.front(); q.pop();
+    int u = f[p[v]];
+
+    f[v] = nxt[u][ch[v]];
+    cnt[v] += cnt[f[v]];
+    elem[v] |= elem[f[v]];
+
+    for (int i = 0; i < 26; ++i) {
+      if (nxt[v][i]) q.push(nxt[v][i]);
+      else nxt[v][i] = nxt[f[v]][i];
+    }
+  }
+}
+
+// Return ans to get number of matches
+// Return a map (or global array) if want to know how many of each string have matched
+bitset<S> match(char *s) {
+  int ans = 0;    // used to know the number of matches
+  bitset<S> found; // used to know which strings matches
+
+  int x = 1;
+  for (int i = 0; s[i]; ++i) {
+    int t = s[i] - 'a';
+    x = nxt[x][t];
+
+    // match found
+    ans += cnt[x];
+    found |= elem[x];
+  }
+
+  return found;
+}
